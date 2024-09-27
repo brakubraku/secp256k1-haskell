@@ -46,6 +46,7 @@ import Crypto.Secp256k1.Internal.BaseOps
     xOnlyPubKeyFromPubKey,
     xOnlyPubKeyParse,
     xOnlyPubKeySerialize,
+    keyPairSecKey
   )
 import Crypto.Secp256k1.Internal.Context (Ctx (..))
 import Crypto.Secp256k1.Internal.ForeignTypes
@@ -96,6 +97,7 @@ import Text.Read
     pfail,
     readPrec,
   )
+import System.Entropy (getEntropy)
 
 newtype PubKey = PubKey {get :: ByteString}
   deriving (Eq, Generic, Hashable, NFData)
@@ -513,9 +515,11 @@ deriveXOnlyPubKey :: Ctx -> PubKey -> XOnlyPubKey
 deriveXOnlyPubKey (Ctx fctx) pubKey = unsafePerformIO $
   withForeignPtr fctx $ \ctx ->
     unsafeUseByteString pubKey.get $ \(pub_key, _) -> do
+      -- xonly_pub_key <- mallocBytes 32
       xonly_pub_key <- mallocBytes 64
       result <- xOnlyPubKeyFromPubKey ctx xonly_pub_key nullPtr pub_key
       if isSuccess result
+        -- then XOnlyPubKey <$> unsafePackByteString (xonly_pub_key, 32)
         then XOnlyPubKey <$> unsafePackByteString (xonly_pub_key, 64)
         else free xonly_pub_key >> error "Unable to derive x-only pubkey"
 
@@ -571,3 +575,34 @@ verifyBip340 (Ctx fctx) xOnlyPubKey message sig = unsafePerformIO $
               msg_ptr
               (fromIntegral messageSize)
               pub_key
+
+newtype KeyPair = KeyPair {get :: ByteString}
+  deriving (Eq, Hashable, Show)
+
+deriveSecKey :: Ctx -> KeyPair -> SecKey
+deriveSecKey (Ctx fctx) (KeyPair kp) =
+  unsafePerformIO $
+  withForeignPtr fctx $ \ctx ->
+    unsafeUseByteString kp $ \(kp_ptr, _) -> do
+      sec_key_ptr <- mallocBytes 32
+      ret <- keyPairSecKey ctx sec_key_ptr kp_ptr
+      unless (isSuccess ret) $ do
+        free sec_key_ptr
+        error "could not compute public key"
+      SecKey <$> unsafePackByteString (sec_key_ptr, 32)
+
+-- | Generate a new 'KeyPair'.
+generateKeyPair :: Ctx -> IO KeyPair
+generateKeyPair (Ctx fctx) = do
+  getEntropy 32 >>= \randomBytes ->
+    withForeignPtr fctx $ \ctx ->
+      unsafeUseByteString randomBytes $ \(sec_key, _) -> do
+        keypair <- mallocBytes 96
+        ret <- keyPairCreate ctx keypair sec_key
+        if isSuccess ret
+          then do
+            out <- unsafePackByteString (keypair, 96)
+            return $ KeyPair out
+          else do
+            free keypair
+            error "could not generate key pair"

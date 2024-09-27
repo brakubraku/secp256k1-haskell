@@ -25,6 +25,8 @@ module Crypto.Secp256k1
     SecKey (..),
     secKey,
     derivePubKey,
+    deriveSecKey,
+    generateKeyPair,
 
     -- * Public Keys
     PubKey (..),
@@ -60,13 +62,15 @@ module Crypto.Secp256k1
     tweakNegate,
 
     -- * BIP340 Support
-    XOnlyPubKey,
+    XOnlyPubKey(..),
     deriveXOnlyPubKey,
     Rand32,
     mkRand32,
-    Bip340Sig,
+    Bip340Sig(..),
     signBip340,
     verifyBip340,
+    KeyPair(..),
+    importXOnlyPubKey
   )
 where
 

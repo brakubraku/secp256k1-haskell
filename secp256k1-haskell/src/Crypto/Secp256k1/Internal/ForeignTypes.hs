@@ -18,7 +18,7 @@ data PubKey64
 
 data XOPubKey32
 
-data KeyPair
+data KeyPairInternal
 
 data Msg32
 

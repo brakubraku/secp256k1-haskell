@@ -11,7 +11,7 @@ module Crypto.Secp256k1.Internal.BaseOps where
 
 import Crypto.Secp256k1.Internal.ForeignTypes
   ( Compact64,
-    KeyPair,
+    KeyPairInternal,
     LCtx,
     Msg32,
     NonceFun,
@@ -181,7 +181,7 @@ foreign import ccall unsafe "secp256k1.h secp256k1_schnorrsig_sign"
     -- | Message
     Ptr Msg32 ->
     -- | Keypair
-    Ptr KeyPair ->
+    Ptr KeyPairInternal ->
     -- | Randomness
     Ptr CUChar ->
     IO CInt
@@ -203,7 +203,7 @@ foreign import ccall unsafe "secp256k1.h secp256k1_keypair_create"
   keyPairCreate ::
     Ptr LCtx ->
     -- | Keypair
-    Ptr KeyPair ->
+    Ptr KeyPairInternal ->
     -- | Secret key
     Ptr SecKey32 ->
     IO CInt
@@ -236,3 +236,11 @@ foreign import ccall unsafe "secp256k1.h secp256k1_xonly_pubkey_from_pubkey"
     -- | Pubkey
     Ptr PubKey64 ->
     IO CInt
+
+foreign import ccall safe "secp256k1.h secp256k1_keypair_sec"
+  keyPairSecKey ::
+    Ptr LCtx -> Ptr SecKey32 -> Ptr KeyPairInternal -> IO Ret
+
+-- foreign import ccall safe "secp256k1.h secp256k1_keypair_xonly_pub"
+--   keyPairXOnlyPubKey ::
+--     Ctx -> Ptr PubKey64 -> CInt -> Ptr KeyPair96 -> IO Ret
